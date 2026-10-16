@@ -6,8 +6,7 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-const CLAVE_SECRETA = process.env.JWT_SECRETO || 'clave_secreta_escolar_consultorio_123';
-
+const CLAVE_SECRETA = process.env.JWT_SECRETO;
 function verificarToken(peticion, respuesta, siguiente) {
     // 1. Obtener el encabezado de autorización
     const cabeceraAutorizacion = peticion.headers['authorization'] || peticion.headers['Authorization'];
@@ -34,9 +33,10 @@ function verificarToken(peticion, respuesta, siguiente) {
         // Continuamos con el controlador
         siguiente();
     } catch (error) {
-        return respuesta.status(403).json({
+        // 401: no sabemos quién es (token vencido o alterado)
+        return respuesta.status(401).json({
             exito: false,
-            mensaje: 'Token inválido o expirado. Por favor iniciá sesión nuevamente.'
+            mensaje: 'Tu sesión venció o no es válida. Iniciá sesión nuevamente.'
         });
     }
 }

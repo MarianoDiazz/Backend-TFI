@@ -3,6 +3,13 @@
 // Node.js + Express + MySQL
 // ==============================================================
 require('dotenv').config();
+
+// Sin clave secreta no se pueden firmar tokens: no arrancamos
+if (!process.env.JWT_SECRETO) {
+    console.error('❌ Falta JWT_SECRETO en el archivo .env. El servidor no puede iniciar.');
+    process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 
@@ -33,6 +40,11 @@ aplicacion.use(cors());
 
 // Permite recibir datos en formato JSON en el cuerpo de las peticiones (req.body)
 aplicacion.use(express.json());
+// Si la petición llega sin cuerpo, dejamos un objeto vacío para que los controladores no fallen
+aplicacion.use((peticion, respuesta, siguiente) => {
+    if (!peticion.body) peticion.body = {};
+    siguiente();
+});
 
 // --------------------------------------------------------------
 // RUTA DE PRUEBA / BIENVENIDA

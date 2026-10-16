@@ -10,9 +10,10 @@ const {
     obtenerConsultaPorTurno
 } = require('../controladores/consultas.controlador');
 
-const { verificarToken } = require('../middlewares/autenticacion');
+const { verificarToken, permitirRoles } = require('../middlewares/autenticacion');
 
-enrutador.use(verificarToken);
+// Historia clínica: solo el médico (secreto profesional)
+enrutador.use(verificarToken, permitirRoles('Medico'));
 
 // Registrar o actualizar consulta médica
 enrutador.post('/', registrarConsulta);

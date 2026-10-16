@@ -53,14 +53,14 @@ async function obtenerPacientePorId(peticion, respuesta) {
 // 3. Crear un nuevo paciente
 async function crearPaciente(peticion, respuesta) {
     try {
-        const { 
-            dni, 
-            nombre, 
-            apellido, 
-            telefono, 
-            email, 
-            id_obra_social, 
-            numero_afiliado 
+        const {
+            dni,
+            nombre,
+            apellido,
+            telefono,
+            email,
+            id_obra_social,
+            numero_afiliado
         } = peticion.body;
 
         // Validaciones básicas de campos obligatorios
@@ -73,14 +73,33 @@ async function crearPaciente(peticion, respuesta) {
 
         // Verificamos si ya existe un paciente con el mismo DNI
         const pacienteExistente = await PacienteModelo.buscarPorDni(dni);
-        if (pacienteExistente) {
+
+        // Si está activo, es un duplicado real
+        if (pacienteExistente && pacienteExistente.activo) {
             return respuesta.status(400).json({
                 exito: false,
-                mensaje: 'Ya existe un paciente registrado con ese número de DNI.'
+                mensaje: 'Ya existe un paciente activo con ese número de DNI.'
             });
         }
 
-        const idInsertado = await PacienteModelo.crear({
+        // Si estaba dado de baja, lo reactivamos (conserva su historial)
+        if (pacienteExistente) {
+            await PacienteModelo.reactivar(pacienteExistente.id_paciente, {
+                dni,
+                nombre,
+                apellido,
+                telefono,
+                email,
+                id_obra_social,
+                numero_afiliado
+            });
+            return respuesta.json({
+                exito: true,
+                mensaje: 'El paciente estaba dado de baja y se reactivó con los datos ingresados.',
+                id_paciente: pacienteExistente.id_paciente
+            });
+
+        } const idInsertado = await PacienteModelo.crear({
             dni,
             nombre,
             apellido,
@@ -108,14 +127,14 @@ async function crearPaciente(peticion, respuesta) {
 async function actualizarPaciente(peticion, respuesta) {
     try {
         const { id } = peticion.params;
-        const { 
-            dni, 
-            nombre, 
-            apellido, 
-            telefono, 
-            email, 
-            id_obra_social, 
-            numero_afiliado 
+        const {
+            dni,
+            nombre,
+            apellido,
+            telefono,
+            email,
+            id_obra_social,
+            numero_afiliado
         } = peticion.body;
 
         if (!dni || !nombre || !apellido || !id_obra_social) {

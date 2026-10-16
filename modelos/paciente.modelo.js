@@ -62,8 +62,7 @@ class PacienteModelo {
 
     // Buscar un paciente por DNI (para validar duplicados)
     static async buscarPorDni(dni, ignorarId = null) {
-        let consultaSql = 'SELECT id_paciente, dni FROM pacientes WHERE dni = ?';
-        const parametros = [dni];
+        let consultaSql = 'SELECT id_paciente, dni, activo FROM pacientes WHERE dni = ?'; const parametros = [dni];
 
         if (ignorarId) {
             consultaSql += ' AND id_paciente != ?';
@@ -115,6 +114,15 @@ class PacienteModelo {
         ];
 
         const [resultado] = await conexion.query(consultaSql, valores);
+        return resultado.affectedRows > 0;
+    }
+    // Reactivar un paciente dado de baja, con sus datos actualizados
+    static async reactivar(idPaciente, datos) {
+        await this.actualizar(idPaciente, datos);
+        const [resultado] = await conexion.query(
+            'UPDATE pacientes SET activo = 1 WHERE id_paciente = ?',
+            [idPaciente]
+        );
         return resultado.affectedRows > 0;
     }
 
