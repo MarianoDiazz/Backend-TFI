@@ -1,6 +1,6 @@
 -- ==============================================================
 -- BASE DE DATOS: Sistema de Gestión para Consultorio Médico
--- Cumple con la Tercera Forma Normal (3FN)
+-- Cumple con la Tercera Forma Normal (3FN)a
 -- ==============================================================
 
 -- 1. Crear la base de datos si no existe
