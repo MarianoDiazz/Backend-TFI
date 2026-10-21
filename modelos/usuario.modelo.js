@@ -96,6 +96,32 @@ class UsuarioModelo {
         return resultado.affectedRows > 0;
     }
 
+    // Guardar el token de recuperación (hasheado), válido por 30 minutos
+    static async guardarTokenRecuperacion(idUsuario, tokenHash) {
+        await conexion.query(
+            'UPDATE usuarios SET token_recuperacion = ?, token_vencimiento = DATE_ADD(NOW(), INTERVAL 30 MINUTE) WHERE id_usuario = ?',
+            [tokenHash, idUsuario]
+        );
+    }
+
+    // Buscar al usuario dueño de un token que todavía no venció
+    static async buscarPorTokenVigente(tokenHash) {
+        const [filas] = await conexion.query(
+            'SELECT id_usuario, email FROM usuarios WHERE token_recuperacion = ? AND token_vencimiento > NOW() AND activo = 1',
+            [tokenHash]
+        );
+        return filas[0] || null;
+    }
+
+    // Guardar la nueva clave y borrar el token (se usa una sola vez)
+    static async restablecerClave(idUsuario, nuevoPasswordHash) {
+        const [resultado] = await conexion.query(
+            'UPDATE usuarios SET password_hash = ?, token_recuperacion = NULL, token_vencimiento = NULL WHERE id_usuario = ?',
+            [nuevoPasswordHash, idUsuario]
+        );
+        return resultado.affectedRows > 0;
+    }
+
     // Activar o desactivar usuario (baja lógica)
     static async cambiarEstado(idUsuario, activo) {
         const [resultado] = await conexion.query(

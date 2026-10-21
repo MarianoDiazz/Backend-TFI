@@ -7,7 +7,8 @@ const enrutador = express.Router();
 const { 
     iniciarSesion, 
     obtenerPerfil, 
-    recuperarClave 
+    solicitarRecuperacion,
+    restablecerClave
 } = require('../controladores/autenticacion.controlador');
 
 const { verificarToken } = require('../middlewares/autenticacion');
@@ -16,7 +17,8 @@ const { verificarToken } = require('../middlewares/autenticacion');
 enrutador.post('/iniciar-sesion', iniciarSesion);
 
 // Ruta pública: Recuperar contraseña
-enrutador.post('/recuperar-clave', recuperarClave);
+enrutador.post('/recuperar-clave', solicitarRecuperacion);
+enrutador.post('/restablecer-clave', restablecerClave);
 
 // Ruta protegida: Obtener datos del usuario logueado usando el token
 enrutador.get('/perfil', verificarToken, obtenerPerfil);

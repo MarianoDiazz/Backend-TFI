@@ -5,9 +5,16 @@
 const UsuarioModelo = require('../modelos/usuario.modelo');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 require('dotenv').config();
 
-const CLAVE_SECRETA = process.env.JWT_SECRETO || 'clave_secreta_escolar_consultorio_123';
+const CLAVE_SECRETA = process.env.JWT_SECRETO;
+const URL_FRONTEND = process.env.URL_FRONTEND || 'http://localhost:5173';
+
+// Convierte el token en un hash SHA-256 para guardarlo en la base
+function hashearToken(token) {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 // 1. Iniciar sesión (Login)
 async function iniciarSesion(peticion, respuesta) {
@@ -107,43 +114,39 @@ async function obtenerPerfil(peticion, respuesta) {
     }
 }
 
-// 3. Recuperar contraseña
-async function recuperarClave(peticion, respuesta) {
+// 3. Pedir recuperación de contraseña: genera un enlace de un solo uso
+async function solicitarRecuperacion(peticion, respuesta) {
     try {
-        const { email, nueva_password } = peticion.body;
+        const { email } = peticion.body;
 
         if (!email) {
             return respuesta.status(400).json({
                 exito: false,
-                mensaje: 'Debes indicar el email para recuperar la contraseña.'
+                mensaje: 'Ingresá tu email.'
             });
         }
 
         const usuario = await UsuarioModelo.buscarPorEmail(email);
-        if (!usuario) {
-            return respuesta.status(404).json({
-                exito: false,
-                mensaje: 'No existe ningún usuario registrado con ese email.'
-            });
+
+        if (usuario && usuario.activo) {
+            // Token aleatorio: el original va en el enlace, en la base guardamos solo su hash
+            const token = crypto.randomBytes(32).toString('hex');
+            await UsuarioModelo.guardarTokenRecuperacion(usuario.id_usuario, hashearToken(token));
+
+            const enlace = `${URL_FRONTEND}/restablecer-clave?token=${token}`;
+            // En producción este enlace se envía por email. En desarrollo lo mostramos en la consola.
+            console.log(`🔑 Enlace de recuperación para ${email} (vence en 30 minutos):`);
+            console.log(enlace);
         }
 
-        if (!nueva_password) {
-            return respuesta.json({
-                exito: true,
-                mensaje: 'Email verificado. Ahora podés enviar la nueva contraseña.'
-            });
-        }
-
-        const nuevoHash = await bcrypt.hash(nueva_password, 10);
-        await UsuarioModelo.actualizarClave(email, nuevoHash);
-
+        // Misma respuesta exista o no el email: así no revelamos quién tiene cuenta
         return respuesta.json({
             exito: true,
-            mensaje: 'Contraseña actualizada con éxito. Ya podés iniciar sesión con tu nueva clave.'
+            mensaje: 'Si el email está registrado, te enviamos un enlace para crear una nueva contraseña. Vence en 30 minutos.'
         });
 
     } catch (error) {
-        console.error('Error en recuperarClave:', error);
+        console.error('Error en solicitarRecuperacion:', error);
         return respuesta.status(500).json({
             exito: false,
             mensaje: 'Error al procesar la recuperación de contraseña.'
@@ -151,8 +154,53 @@ async function recuperarClave(peticion, respuesta) {
     }
 }
 
+// 4. Restablecer la contraseña con el enlace recibido
+async function restablecerClave(peticion, respuesta) {
+    try {
+        const { token, nueva_password } = peticion.body;
+
+        if (!token || !nueva_password) {
+            return respuesta.status(400).json({
+                exito: false,
+                mensaje: 'Faltan datos para restablecer la contraseña.'
+            });
+        }
+
+        if (typeof nueva_password !== 'string' || nueva_password.length < 6) {
+            return respuesta.status(400).json({
+                exito: false,
+                mensaje: 'La contraseña debe tener al menos 6 caracteres.'
+            });
+        }
+
+        const usuario = await UsuarioModelo.buscarPorTokenVigente(hashearToken(token));
+        if (!usuario) {
+            return respuesta.status(400).json({
+                exito: false,
+                mensaje: 'El enlace no es válido o ya venció. Pedí uno nuevo.'
+            });
+        }
+
+        const nuevoHash = await bcrypt.hash(nueva_password, 10);
+        await UsuarioModelo.restablecerClave(usuario.id_usuario, nuevoHash);
+
+        return respuesta.json({
+            exito: true,
+            mensaje: 'Contraseña actualizada. Ya podés iniciar sesión.'
+        });
+
+    } catch (error) {
+        console.error('Error en restablecerClave:', error);
+        return respuesta.status(500).json({
+            exito: false,
+            mensaje: 'Error al restablecer la contraseña.'
+        });
+    }
+}
+
 module.exports = {
     iniciarSesion,
     obtenerPerfil,
-    recuperarClave
+    solicitarRecuperacion,
+    restablecerClave
 };

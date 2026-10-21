@@ -1,6 +1,6 @@
 -- ==============================================================
 -- BASE DE DATOS: Sistema de Gestión para Consultorio Médico
--- Cumple con la Tercera Forma Normal (3FN)a
+-- Cumple con la Tercera Forma Normal (3FN)
 -- ==============================================================
 
 -- 1. Crear la base de datos si no existe
@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     token_recuperacion VARCHAR(255) NULL,
+    token_vencimiento DATETIME NULL,
     activo TINYINT(1) DEFAULT 1,
     FOREIGN KEY (id_rol) REFERENCES roles(id_rol) ON DELETE RESTRICT
 );
